@@ -8,17 +8,9 @@
 
 ## What Is This?
 
-The OmniBreeze DC2018 is a 40" tower fan sold at Costco. Out of the box it has no smart home capability, only a physical remote and control panel. This project adds full Home Assistant integration with real-time state feedback, voice control, and a custom OLED display without modifying the fan's original electronics.
+The OmniBreeze DC2018 is a 40" tower fan. Out of the box it has no smart home capability, only a physical remote and control panel. This project adds full Home Assistant integration with real-time state feedback, voice control, and a custom OLED display without modifying the fan's original electronics.
 
 Unlike most IR integrations, this project reads the fan's actual state and reports it back to Home Assistant. Speed, breeze mode, and timer status are monitored in real time using light-dependent resistors (LDRs) positioned over the fan's indicator LEDs. Home Assistant always reflects the fan's current state, whether it was changed from Home Assistant, the physical control panel, or the original remote.
-
----
-
-## Demo
-
-> 📹 [Watch the full feature walkthrough video](#) *(link your video here)*
-
----
 
 ## Features
 
