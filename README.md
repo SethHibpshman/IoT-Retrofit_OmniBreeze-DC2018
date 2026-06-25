@@ -8,9 +8,9 @@
 
 ## What Is This?
 
-The OmniBreeze DC2018 is a 40" tower fan sold at Costco. Out of the box it has no smart home capability - just a physical remote and a control panel. This project gives it full Home Assistant integration with real-time state feedback, voice control, and a custom OLED display, all without modifying the fan's original electronics.
+The OmniBreeze DC2018 is a 40" tower fan sold at Costco. Out of the box it has no smart home capability, only a physical remote and control panel. This project adds full Home Assistant integration with real-time state feedback, voice control, and a custom OLED display without modifying the fan's original electronics.
 
-This is not just a "send an IR command and hope for the best" project. The fan's actual state - speed, breeze mode, timer - is read back in real time using light-dependent resistors (LDRs) placed against the fan's own indicator LEDs. What Home Assistant shows always reflects what the fan is actually doing, regardless of whether it was controlled by HA, the physical buttons, or the original remote.
+Unlike most IR integrations, this project reads the fan's actual state and reports it back to Home Assistant. Speed, breeze mode, and timer status are monitored in real time using light-dependent resistors (LDRs) positioned over the fan's indicator LEDs. Home Assistant always reflects the fan's current state, whether it was changed from Home Assistant, the physical control panel, or the original remote.
 
 ---
 
@@ -22,28 +22,27 @@ This is not just a "send an IR command and hope for the best" project. The fan's
 
 ## Features
 
-- **Full IR control** - power, speed, breeze mode, oscillation, and timer all sent via IR
-- **Real-time state reading** - 11 LDRs read the fan's own LEDs to report actual state back to HA
-- **Home Assistant fan entity** - speed, oscillation, breeze mode, and timer all exposed as native HA entities
-- **Auto sleep-mode correction** - if the fan cycles into sleep breeze mode, ESPHome detects it and corrects it automatically
-- **Custom OLED display** - 128x32 SSD1306 shows speed, breeze mode, and timer status with a logo on the off screen
-- **Custom 3D printed mount** - LDR frame and OLED shell designed in Autodesk Fusion, printed in PLA
+- **Full IR control:** power, speed, breeze mode, oscillation, and timer
+- **Real-time state reading:** 11 LDRs monitor the fan's LEDs and report actual state back to Home Assistant
+- **Home Assistant fan entity:** speed, oscillation, breeze mode, and timer exposed as native entities
+- **Auto sleep-mode correction:** ESPHome detects unintended sleep-mode transitions and automatically restores the selected mode
+- **Custom OLED display:** 128×32 SSD1306 display showing speed, breeze mode, and timer status, plus a logo when the fan is off
+- **Custom 3D printed mount:** LDR frame and OLED enclosure designed in Autodesk Fusion and printed in PLA
 
 ---
 
 ## How It Works
 
 ### IR Control
-The fan's IR protocol was discovered by brute-forcing NEC address/command combinations with a MicroPython script on the ESP32. Once the five working commands were found, they were re-implemented in ESPHome using raw pulse timing to exactly match the working MicroPython implementation.
+The fan's IR protocol was discovered by brute-forcing NEC address and command combinations with a MicroPython script running on the ESP32. Once the five valid commands were identified, they were recreated in ESPHome using raw pulse timing that matched the working MicroPython implementation.
 
 ### State Feedback via LDRs
-Because every button on the fan cycles (power toggles, speed cycles through 4, breeze cycles through 3, timer cycles through 16 steps), there is no way to know the fan's state from commands alone. Eleven LDRs are positioned directly against the fan's indicator LEDs and read by the ESP32's ADC. Binary sensors with threshold detection convert the analog voltage into clean on/off state for each indicator.
+Every button on the fan cycles through multiple states, so command tracking alone cannot reliably determine the current operating mode. Eleven LDRs sit directly over the fan's indicator LEDs and are monitored by the ESP32's ADC. Threshold-based binary sensors convert the analog readings into clean on/off states for each indicator.
 
 ### 3D Printed Housing
-A two-part 3D printed system was designed from scratch in Autodesk Fusion:
-- **LDR frame** - holds all 11 LDRs precisely against their corresponding LEDs on the control panel
-- **Top shell** - covers the frame and provides a mount for the SSD1306 OLED display
-
+A two-part enclosure was designed in Autodesk Fusion:
+- **LDR frame:** positions all 11 LDRs directly over their corresponding LEDs
+- **Top shell:** covers the frame and provides a mounting point for the SSD1306 OLED display
 Both parts were printed in PLA on an Elegoo Neptune 3 Pro.
 
 ---
@@ -78,17 +77,13 @@ Both parts were printed in PLA on an Elegoo Neptune 3 Pro.
 
 ```
 OmniBreeze-DC2018-ESPHome/
-├── esphome/
-│   ├── omnibreeze-fan.yaml       # Full ESPHome config
-│   └── sh_logo.png               # OLED logo image
-├── micropython/
-│   └── ir_brute_force.py         # IR discovery script
-├── home-assistant/
-│   └── dashboard-card.yaml       # Lovelace card config
-├── 3d-models/
-│   ├── ldr-frame.stl             # LDR holder
-│   └── oled-shell.stl            # Top cover with OLED mount
-├── images/                       # Project photos
+├── firmware/
+│   ├── esphome/omnibreeze-fan.yaml       # Full ESPHome config
+│   └── micropython_ir_scraping/          # Micropython tools used to scrape IR commands
+├── hardware/
+│   ├── 3d_models/                 # 3D models of all printed parts
+│   └── esp32-s3_n16r8/            # ESP module specific files
+├── reference material/            # Datasheets for fan & linear power regulator on board
 └── README.md
 ```
 
@@ -96,19 +91,19 @@ OmniBreeze-DC2018-ESPHome/
 
 ## What I Learned
 
-**IR protocol reverse engineering is not always clean.** The ESPHome `transmit_nec` helper didn't work with this fan - the bit timing didn't match. The fix was switching to raw pulse arrays hand-encoded from the working MicroPython implementation. Getting the exact 9000µs header, 4500µs gap, and 560/1690µs bit timings right made the difference.
+**IR protocol reverse engineering is not always clean.** The ESPHome transmit_nec helper did not work with this fan because the generated timing differed from what the receiver expected. Switching to raw pulse arrays solved the issue. Matching the 9000µs header, 4500µs gap, and 560/1690µs bit timing produced reliable operation.
 
-**Analog state detection is harder than it sounds.** Blue LEDs are less sensitive to standard LDRs than green or yellow light. Two physically adjacent LEDs (sleep breeze and the 1h timer) caused crosstalk that made both sensors read identically - indistinguishable in voltage alone. The fix was a software rule: if both are high, assume timer, never sleep.
+**Analog state detection is harder than it sounds.** Blue LEDs produced weaker responses from the LDRs than green or yellow LEDs. Two adjacent indicators, sleep breeze mode and the 1-hour timer LED, also created enough light leakage to generate nearly identical readings. A software rule resolves the ambiguity: when both sensors read high, the state is treated as a timer indicator rather than sleep mode.
 
-**ESPHome's feedback loop problem is real.** Syncing a template fan entity's displayed state back from hardware sensors without triggering the send callbacks took several iterations. The final working approach was a 1-second interval writing directly to the entity's internal state variables via `publish_state()`.
+**ESPHome's feedback loop problem is real.** Synchronizing the template fan entity with hardware sensor feedback without triggering command callbacks required several iterations. The final solution uses a one-second interval that updates the entity's internal state through publish_state().
 
-**Power supply research matters.** The fan contains a KP3310DP offline AC-DC regulator IC capable of 5V output. After researching the datasheet, it seemed like a clean internal power source for the ESP32 - but the 138mA current limit couldn't handle the ESP32's WiFi transmit spikes, causing brownout resets. The ESP32 ended up on a separate USB power supply.
+**Power supply research matters.** The fan contains a KP3310DP offline AC-DC regulator capable of providing 5V output. Datasheet review suggested it could power the ESP32 internally, but testing showed the 138mA current limit could not handle Wi-Fi transmission spikes. Brownout resets occurred regularly, so the ESP32 was moved to a dedicated USB power supply.
 
 ---
 
 ## What I Would Do Differently
 
-The ESP32 is powered by a USB cable that exits the fan, meaning two wall plugs are used total - one for the fan, one for the ESP32. Ideally a small isolated AC-DC module like the HLK-PM01 (5V/600mA, fully isolated from mains) would be wired internally to power everything from a single plug. The KP3310 research showed it wasn't viable for this, but the HLK-PM01 is a $3 drop-in solution that would clean this up completely.
+The ESP32 is currently powered through a USB cable routed outside the fan, requiring a second wall outlet. A small isolated AC-DC module such as the HLK-PM01 could be installed internally and power both the fan controller and ESP32 from a single plug. Testing showed the KP3310DP was not suitable for this role, but the HLK-PM01 would provide a straightforward solution.
 
 ---
 
