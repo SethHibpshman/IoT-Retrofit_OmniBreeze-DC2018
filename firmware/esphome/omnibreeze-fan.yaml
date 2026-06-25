@@ -1,0 +1,519 @@
+esphome:
+  name: omnibreeze-fan
+  friendly_name: OmniBreeze Fan
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+
+logger:
+
+api:
+  encryption:
+    key: XXXXXXXXXXXXXX
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: omnibreeze-fan Fallback Hotspot
+    password: XXXXXXXXXXXXXX
+
+remote_transmitter:
+  pin: GPIO4
+  carrier_duty_percent: 50%
+
+i2c:
+  sda: GPIO21
+  scl: GPIO18
+
+globals:
+  - id: oscillation_state
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+font:
+  - file: "gfonts://Roboto Mono"
+    id: font_main
+    size: 9
+
+image:
+  - file: "sh_logo.png"
+    id: fan_logo
+    type: BINARY
+    invert_alpha: true
+
+interval:
+  - interval: 1s
+    then:
+      - lambda: |-
+          // Sync breeze select
+          std::string breeze = "standard";
+          if (id(led_breeze2).state) breeze = "natural";
+          id(breeze_mode).publish_state(breeze);
+
+          // Sync timer select
+          int hours = (id(led_timer1).state ? 1 : 0)
+                    + (id(led_timer2).state ? 2 : 0)
+                    + (id(led_timer3).state ? 4 : 0)
+                    + (id(led_timer4).state ? 8 : 0);
+          std::string timer = "off";
+          if (hours == 1)  timer = "1h";
+          if (hours == 2)  timer = "2h";
+          if (hours == 3)  timer = "3h";
+          if (hours == 4)  timer = "4h";
+          if (hours == 5)  timer = "5h";
+          if (hours == 6)  timer = "6h";
+          if (hours == 7)  timer = "7h";
+          if (hours == 8)  timer = "8h";
+          if (hours == 9)  timer = "9h";
+          if (hours == 10) timer = "10h";
+          if (hours == 11) timer = "11h";
+          if (hours == 12) timer = "12h";
+          if (hours == 13) timer = "13h";
+          if (hours == 14) timer = "14h";
+          if (hours == 15) timer = "15h";
+          id(fan_timer_select).publish_state(timer);
+    
+sensor:
+  - platform: adc
+    pin: GPIO1
+    id: ldr_speed1
+    name: "LDR Speed 1 Raw"
+    update_interval: 100ms
+    attenuation: 12db
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+
+  - platform: adc
+    pin: GPIO2
+    id: ldr_speed2
+    name: "LDR Speed 2 Raw"
+    update_interval: 100ms
+    attenuation: 12db
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+
+  - platform: adc
+    pin: GPIO3
+    id: ldr_speed3
+    name: "LDR Speed 3 Raw"
+    update_interval: 100ms
+    attenuation: 12db
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+
+  - platform: adc
+    pin: GPIO8
+    id: ldr_speed4
+    name: "LDR Speed 4 Raw"
+    update_interval: 100ms
+    attenuation: 12db
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+
+  - platform: adc
+    pin: GPIO9
+    id: ldr_breeze1
+    name: "LDR Breeze 1 Raw"
+    update_interval: 100ms
+    attenuation: 12db
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+
+  - platform: adc
+    pin: GPIO10
+    id: ldr_breeze2
+    name: "LDR Breeze 2 Raw"
+    update_interval: 100ms
+    attenuation: 12db
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+
+  - platform: adc
+    pin: GPIO11
+    id: ldr_breeze3
+    name: "LDR Breeze 3 Raw"
+    update_interval: 100ms
+    attenuation: 12db
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+
+  - platform: adc
+    pin: GPIO12
+    id: ldr_timer1
+    name: "LDR Timer 1 Raw"
+    update_interval: 100ms
+    attenuation: 12db
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+
+  - platform: adc
+    pin: GPIO13
+    id: ldr_timer2
+    name: "LDR Timer 2 Raw"
+    update_interval: 100ms
+    attenuation: 12db
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+
+  - platform: adc
+    pin: GPIO14
+    id: ldr_timer3
+    name: "LDR Timer 3 Raw"
+    update_interval: 100ms
+    attenuation: 12db
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+
+  - platform: adc
+    pin: GPIO17
+    id: ldr_timer4
+    name: "LDR Timer 4 Raw"
+    update_interval: 100ms
+    attenuation: 12db
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+
+binary_sensor:
+  - platform: analog_threshold
+    sensor_id: ldr_speed1
+    id: led_speed1
+    threshold: 0.15
+    internal: true
+
+  - platform: analog_threshold
+    sensor_id: ldr_speed2
+    id: led_speed2
+    threshold: 0.15
+    internal: true
+
+  - platform: analog_threshold
+    sensor_id: ldr_speed3
+    id: led_speed3
+    threshold: 0.15
+    internal: true
+
+  - platform: analog_threshold
+    sensor_id: ldr_speed4
+    id: led_speed4
+    threshold: 0.15
+    internal: true
+
+  - platform: analog_threshold
+    sensor_id: ldr_breeze1
+    id: led_breeze1
+    threshold: 0.15
+    internal: true
+
+  - platform: analog_threshold
+    sensor_id: ldr_breeze2
+    id: led_breeze2
+    threshold: 0.15
+    internal: true
+
+  - platform: analog_threshold
+    sensor_id: ldr_breeze3
+    id: led_breeze3
+    threshold: 0.15
+    internal: true
+
+  - platform: analog_threshold
+    sensor_id: ldr_timer1
+    id: led_timer1
+    threshold: 0.15
+    internal: true
+
+  - platform: analog_threshold
+    sensor_id: ldr_timer2
+    id: led_timer2
+    threshold: 0.15
+    internal: true
+
+  - platform: analog_threshold
+    sensor_id: ldr_timer3
+    id: led_timer3
+    threshold: 0.15
+    internal: true
+
+  - platform: analog_threshold
+    sensor_id: ldr_timer4
+    id: led_timer4
+    threshold: 0.15
+    internal: true
+
+text_sensor:
+  - platform: template
+    name: "Fan Power"
+    id: fan_power
+    lambda: |-
+      bool any_on = id(led_speed1).state || id(led_speed2).state ||
+                    id(led_speed3).state || id(led_speed4).state;
+      return any_on ? std::string("on") : std::string("off");
+    update_interval: 500ms
+
+  - platform: template
+    name: "Fan Speed"
+    id: fan_speed
+    lambda: |-
+      if (id(led_speed1).state) return std::string("ultra-quiet");
+      if (id(led_speed2).state) return std::string("low");
+      if (id(led_speed3).state) return std::string("med");
+      if (id(led_speed4).state) return std::string("high");
+      return std::string("off");
+    update_interval: 500ms
+
+  - platform: template
+    name: "Fan Breeze Mode"
+    id: fan_breeze
+    lambda: |-
+      if (id(led_breeze1).state) return std::string("standard");
+      if (id(led_breeze2).state) return std::string("natural");
+      if (id(led_breeze3).state) {
+        id(send_breeze).execute();
+        return std::string("standard");
+      }
+      return std::string("off");
+    update_interval: 500ms
+
+  - platform: template
+    name: "Fan Timer"
+    id: fan_timer
+    lambda: |-
+      int hours = (id(led_timer1).state ? 1 : 0)
+                + (id(led_timer2).state ? 2 : 0)
+                + (id(led_timer3).state ? 4 : 0)
+                + (id(led_timer4).state ? 8 : 0);
+      if (hours == 0) return std::string("off");
+      return std::to_string(hours) + "h";
+    update_interval: 500ms
+
+script:
+  - id: send_speed
+    then:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38000Hz
+          code: [9000, -4500, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -40000]
+
+  - id: send_oscillation
+    then:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38000Hz
+          code: [9000, -4500, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -40000]
+
+  - id: send_timer
+    then:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38000Hz
+          code: [9000, -4500, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -40000]
+
+  - id: send_breeze
+    then:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38000Hz
+          code: [9000, -4500, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -560, 560, -560, 560, -1690, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -1690, 560, -1690, 560, -560, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -40000]
+
+  - id: send_power
+    then:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38000Hz
+          code: [9000, -4500, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -560, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -1690, 560, -560, 560, -1690, 560, -560, 560, -1690, 560, -1690, 560, -560, 560, -560, 560, -560, 560, -1690, 560, -560, 560, -1690, 560, -560, 560, -560, 560, -1690, 560, -1690, 560, -1690, 560, -40000]
+
+  - id: cycle_speed_to
+    parameters:
+      target: int
+    then:
+      - lambda: |-
+          int current = 0;
+          if (id(led_speed1).state) current = 1;
+          else if (id(led_speed2).state) current = 2;
+          else if (id(led_speed3).state) current = 3;
+          else if (id(led_speed4).state) current = 4;
+          if (current == 0 || current == target) return;
+          int presses = (target - current + 4) % 4;
+          for (int i = 0; i < presses; i++) {
+            id(send_speed).execute();
+            delay(300);
+          }
+
+  - id: cycle_breeze_to
+    parameters:
+      target: int
+    then:
+      - lambda: |-
+          int current = 0;
+          if (id(led_breeze1).state) current = 1;
+          else if (id(led_breeze2).state) current = 2;
+          else if (id(led_breeze3).state) current = 3;
+          if (current == 0 || current == target) return;
+          int presses = (target - current + 3) % 3;
+          for (int i = 0; i < presses; i++) {
+            id(send_breeze).execute();
+            delay(300);
+          }
+
+  - id: cycle_timer_to
+    parameters:
+      target: int
+    then:
+      - lambda: |-
+          int current = (id(led_timer1).state ? 1 : 0)
+                      + (id(led_timer2).state ? 2 : 0)
+                      + (id(led_timer3).state ? 4 : 0)
+                      + (id(led_timer4).state ? 8 : 0);
+          if (current == target) return;
+          int presses = (target - current + 16) % 16;
+          for (int i = 0; i < presses; i++) {
+            id(send_timer).execute();
+            delay(300);
+          }
+          
+select:
+  - platform: template
+    name: "Breeze Mode"
+    id: breeze_mode
+    options:
+      - standard
+      - natural
+    initial_option: standard
+    optimistic: true
+    set_action:
+      - lambda: |-
+          int target = 1;
+          if (x == "natural") target = 2;
+          id(cycle_breeze_to).execute(target);
+
+  - platform: template
+    name: "Fan Timer"
+    id: fan_timer_select
+    options:
+      - "off"
+      - "1h"
+      - "2h"
+      - "3h"
+      - "4h"
+      - "5h"
+      - "6h"
+      - "7h"
+      - "8h"
+      - "9h"
+      - "10h"
+      - "11h"
+      - "12h"
+      - "13h"
+      - "14h"
+      - "15h"
+    initial_option: "off"
+    optimistic: true
+    set_action:
+      - lambda: |-
+          int target = 0;
+          if (x == "1h")  target = 1;
+          if (x == "2h")  target = 2;
+          if (x == "3h")  target = 3;
+          if (x == "4h")  target = 4;
+          if (x == "5h")  target = 5;
+          if (x == "6h")  target = 6;
+          if (x == "7h")  target = 7;
+          if (x == "8h")  target = 8;
+          if (x == "9h")  target = 9;
+          if (x == "10h") target = 10;
+          if (x == "11h") target = 11;
+          if (x == "12h") target = 12;
+          if (x == "13h") target = 13;
+          if (x == "14h") target = 14;
+          if (x == "15h") target = 15;
+          id(cycle_timer_to).execute(target);
+
+button:
+  - platform: template
+    name: "Fan Power Toggle"
+    icon: "mdi:power"
+    on_press:
+      - script.execute: send_power
+
+  - platform: template
+    name: "Fan Speed Cycle"
+    icon: "mdi:speedometer"
+    on_press:
+      - script.execute: send_speed
+
+  - platform: template
+    name: "Fan Breeze Mode Cycle"
+    icon: "mdi:weather-windy"
+    on_press:
+      - script.execute: send_breeze
+
+  - platform: template
+    name: "Fan Oscillation Toggle"
+    icon: "mdi:arrow-oscillating"
+    on_press:
+      - script.execute: send_oscillation
+
+  - platform: template
+    name: "Fan Timer Cycle"
+    icon: "mdi:timer-sand-empty"
+    on_press:
+      - script.execute: send_timer
+
+display:
+  - platform: ssd1306_i2c
+    model: SSD1306_128X32
+    address: 0x3c
+    lambda: |-
+      bool any_on = id(led_speed1).state || id(led_speed2).state ||
+                    id(led_speed3).state || id(led_speed4).state;
+
+      if (!any_on) {
+        it.print(0, 0, id(font_main), "OmniBreeze");
+        it.print(0, 11, id(font_main), "OFF");
+        it.image(96, 0, id(fan_logo));
+        return;
+      }
+
+      std::string speed = "?";
+      if (id(led_speed1).state) speed = "Ultra-Quiet";
+      if (id(led_speed2).state) speed = "Low";
+      if (id(led_speed3).state) speed = "Med";
+      if (id(led_speed4).state) speed = "High";
+
+      std::string breeze = "Off";
+      if (id(led_breeze1).state) breeze = "Standard";
+      if (id(led_breeze2).state) breeze = "Natural";
+
+      int hours = (id(led_timer1).state ? 1 : 0)
+                + (id(led_timer2).state ? 2 : 0)
+                + (id(led_timer3).state ? 4 : 0)
+                + (id(led_timer4).state ? 8 : 0);
+      std::string timer_str = hours == 0 ? "Off" : std::to_string(hours) + "h";
+
+      it.printf(0,  0, id(font_main), "Speed:  %s", speed.c_str());
+      it.printf(0, 11, id(font_main), "Breeze: %s", breeze.c_str());
+      it.printf(0, 22, id(font_main), "Timer:  %s", timer_str.c_str());
